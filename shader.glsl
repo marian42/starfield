@@ -10,6 +10,7 @@ const float STAR_CORE_SIZE = 0.2;
 const float CLUSTER_SCALE = 0.02;
 const float STAR_THRESHOLD = 0.6;
 
+// https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
 float rand(vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
