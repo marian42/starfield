@@ -152,14 +152,6 @@ vec3 getStarToRayVector(vec3 rayBase, vec3 rayDirection, vec3 starPosition) {
     return starPosition - pointOnRay;
 }
 
-float getStarBrightness(float starDistance, float brightnessFactor) {
-    float full = 1.0 * brightnessFactor;
-    if (starDistance < STAR_CORE_SIZE) {
-        return full * 2.0;
-    }
-    return 0.25 * full * (1.0 - pow((starDistance - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE), 1.0));
-}
-
 // Makes sure that each component of localPosition is >= 0 and <= 1
 void moveInsideBox(inout vec3 localPosition, inout ivec3 chunk, vec3 directionSign) {
     vec3 bound = vec3(0.5, 0.5, 0.5) + 0.5 * directionSign;
@@ -201,7 +193,7 @@ vec3 hsv2rgb(vec3 c) {
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-vec3 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
+vec4 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
     vec3 color = vec3(0.0, 0.0, 0.0);
     float spaceLeft = 1.0;    
     
@@ -229,14 +221,26 @@ vec3 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
         color += spaceLeft * hsv2rgb(vec3(hue, 1.0, value));
         spaceLeft = max(0.0, spaceLeft - value * 2.0);
     }
-    return color;
+    return vec4(color, 1.0);
 }
 
+float getStarGlowBrightness(float starDistance) {
+    return 0.2 * (1.0 - starDistance);
+}
+
+vec4 getStarColor(vec3 starSurfaceLocation) {
+    return vec4(1.0, 0.0, 0.0, 1.0);
+    
+}
+
+vec4 blendColors(vec4 front, vec4 back) {
+	return vec4(front.rgb * front.a + back.rgb * (1.0 - front.a), front.a + (1.0 - front.a) * back.a);
+}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     //float k = 0.4;
     //vec3 movementDirection = vec3(sin(k * iGlobalTime), 0.0,  cos(k * iGlobalTime));
-    vec3 movementDirection = normalize(vec3(0.5, 0.0, 1.0));
+    vec3 movementDirection = normalize(vec3(0.2, 0.0, 1.0));
     
     vec3 rayDirection = getRayDirection(fragCoord, movementDirection);
     vec3 directionSign = vec3(rayDirection.x > 0.0 ? 1.0 : -1.0, rayDirection.y > 0.0 ? 1.0 : -1.0, rayDirection.z > 0.0 ? 1.0 : -1.0);
@@ -251,7 +255,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     ivec3 startChunk = chunk;
     vec3 localStart = localPosition;
     
-    float brightness = 0.0;
+    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
     
     for (int i = 0; i < 100; i++) {
         move(localPosition, rayDirection);
@@ -265,26 +269,31 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 break;
             }
 
+            // This vector points from the center of the star to the closest point on the ray (orthogonal to the ray)
             vec3 starToRayVector = getStarToRayVector(localPosition, rayDirection, starPosition);
-
+            // Distance between ray and star
             float distanceToStar = length(starToRayVector);
-            float starMaxBrightness = min(1.0, (DRAW_DISTANCE - currentDistance) / FADEOUT_DISTANCE);
-            if (distanceToStar < 0.5 * STAR_SIZE) {
-                brightness += getStarBrightness(distanceToStar / (0.5 * STAR_SIZE), starMaxBrightness);
-                if (brightness >= 1.0) {
-                    break;
+            distanceToStar *= 2.0;
+            
+            if (distanceToStar < STAR_SIZE) {
+                float starMaxBrightness = min(1.0, (DRAW_DISTANCE - currentDistance) / FADEOUT_DISTANCE);
+            	
+                if (distanceToStar < STAR_SIZE * STAR_CORE_SIZE) {
+                    // This vector points from the center of the star to the point of the star sphere surface that this ray hits
+            		vec3 starSurfaceVector = normalize(starToRayVector + rayDirection * sqrt(pow(STAR_CORE_SIZE, 2.0) - pow(distanceToStar, 2.0)));
+					
+                    fragColor = blendColors(fragColor, getStarColor(starSurfaceVector));                    
+                    return;
+                } else {
+                	fragColor = blendColors(fragColor, vec4(1.0, 1.0, 1.0, starMaxBrightness * getStarGlowBrightness(((distanceToStar / STAR_SIZE) - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE))));
                 }
             }
         }
     }
     
-    brightness = min(1.0, brightness);
     
-    vec3 color = getNebulaColor(globalPosition, rayDirection);    
-    color += brightness * vec3(1.0, 1.0, 1.0);
-    
+    fragColor = blendColors(fragColor, getNebulaColor(globalPosition, rayDirection));
     if (iGlobalTime < 1.0) {
-        color *= iGlobalTime;
+        fragColor *= iGlobalTime;
     }
-    fragColor = vec4(color, 1.0);
 }
