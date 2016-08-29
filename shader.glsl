@@ -212,8 +212,11 @@ vec3 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
     for (int i = 0; i <= steps; i++) {
     	vec3 noiseeval = globalPosition + rayDirection * ((1.0 - fract(globalPosition.z / layerDistance) + float(i)) * layerDistance / rayDirection.z);
     	
-        float value = 0.4 * pow(snoise(0.03 * noiseeval), 2.5);
-        
+        float value = 0.1 *  (1.000 * pow(snoise(0.03 * noiseeval), 2.0) 
+                            + 0.500 * pow(snoise(0.06 * noiseeval), 2.0)
+                            + 0.250 * pow(snoise(0.12 * noiseeval), 2.0)
+                            + 0.125 * pow(snoise(0.24 * noiseeval), 2.0));
+         
         if (i == 0) {
             value *= 1.0 - fract(globalPosition.z / layerDistance);
         }
