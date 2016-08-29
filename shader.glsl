@@ -228,9 +228,33 @@ float getStarGlowBrightness(float starDistance) {
     return 0.2 * (1.0 - starDistance);
 }
 
-vec4 getStarColor(vec3 starSurfaceLocation) {
-    return vec4(1.0, 0.0, 0.0, 1.0);
+float atan2(vec2 value) {
+    if (value.x > 0.0) {
+        return atan(value.y / value.x);
+    } else if (value.x == 0.0) {
+    	return 3.14592 * 0.5 * sign(value.y);   
+    } else if (value.y >= 0.0) {
+        return atan(value.y / value.x) + 3.141592;
+    } else {
+        return atan(value.y / value.x) - 3.141592;
+    }
+}
+
+vec3 getStarColor(vec3 starSurfaceLocation, float seed, float viewDistance) {
+    const float DISTANCE_FAR = 30.0;
+    const float DISTANCE_NEAR = 25.0;
     
+    if (viewDistance > DISTANCE_FAR) {
+    	return vec3(1.0, 1.0, 1.0);
+    }
+    
+    float fadeToWhite = max(0.0, (viewDistance - DISTANCE_NEAR) / (DISTANCE_FAR - DISTANCE_NEAR));
+    
+    vec3 coordinate = vec3(acos(starSurfaceLocation.y), atan2(starSurfaceLocation.xz), seed);
+    
+    float progress = snoise(4.0 * coordinate);
+    
+    return vec3(1.0, 1.0, 1.0) * fadeToWhite + (1.0 - fadeToWhite) * (vec3(1.0, 0.627, 0.01) * progress + (1.0 - progress) * vec3(1.0, 0.98, 0.9));   
 }
 
 vec4 blendColors(vec4 front, vec4 back) {
@@ -280,10 +304,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             	
                 if (distanceToStar < STAR_SIZE * STAR_CORE_SIZE) {
                     // This vector points from the center of the star to the point of the star sphere surface that this ray hits
-            		vec3 starSurfaceVector = normalize(starToRayVector + rayDirection * sqrt(pow(STAR_CORE_SIZE, 2.0) - pow(distanceToStar, 2.0)));
+            		vec3 starSurfaceVector = normalize(starToRayVector + rayDirection * sqrt(pow(STAR_CORE_SIZE * STAR_SIZE, 2.0) - pow(distanceToStar, 2.0)));
 					
-                    fragColor = blendColors(fragColor, getStarColor(starSurfaceVector));                    
-                    return;
+                    float starColorSeed = (float(chunk.x) + 13.0 * float(chunk.y) + 7.0 * float(chunk.z)) * 0.00453;
+                    fragColor = blendColors(fragColor, vec4(getStarColor(starSurfaceVector, starColorSeed, currentDistance), starMaxBrightness));                    
+                    if (starMaxBrightness == 1.0) {
+                    	return;
+                    }
                 } else {
                 	fragColor = blendColors(fragColor, vec4(1.0, 1.0, 1.0, starMaxBrightness * getStarGlowBrightness(((distanceToStar / STAR_SIZE) - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE))));
                 }
