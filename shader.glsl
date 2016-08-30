@@ -10,11 +10,6 @@ const float STAR_CORE_SIZE = 0.3;
 const float CLUSTER_SCALE = 0.02;
 const float STAR_THRESHOLD = 0.6;
 
-// https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898, 78.233))) * 43758.5453);
-}
-
 //
 // Description : Array and textureless GLSL 2D/3D/4D simplex 
 //               noise functions.
@@ -116,7 +111,19 @@ float rand(vec2 co){
       m = m * m;
       return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), 
                                     dot(p2,x2), dot(p3,x3) ) );
-      }
+	}
+
+// http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898, 78.233))) * 43758.5453);
+}
 
 vec3 getRayDirection(vec2 fragCoord, vec3 cameraDirection) {
     vec2 uv = fragCoord.xy / iResolution.xy;
@@ -175,14 +182,7 @@ vec3 getStarPosition(ivec3 chunk, float starSize) {
                              rand(vec2(float(chunk.x) / float(chunk.z) + 0.73, float(chunk.z) / float(chunk.y) + 0.45)),
                              rand(vec2(float(chunk.y) / float(chunk.x) + 0.12, float(chunk.y) / float(chunk.z) + 0.76))));
     
-    return starSize * vec3(1.0, 1.0, 1.0) + (1.0 - 2.0 * starSize) * position;
-}
-
-// http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+    return starSize * vec3(1.0) + (1.0 - 2.0 * starSize) * position;
 }
 
 vec4 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
