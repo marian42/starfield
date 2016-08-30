@@ -5,14 +5,14 @@ const float FADEOUT_DISTANCE = 40.0; // must be < DRAW_DISTANCE
 const float FIELD_OF_VIEW = radians(60.0);   
 
 const float STAR_SIZE = 0.4; // must be > 0 and < 1
-const float STAR_CORE_SIZE = 0.2;    
+const float STAR_CORE_SIZE = 0.3;    
 
 const float CLUSTER_SCALE = 0.02;
 const float STAR_THRESHOLD = 0.6;
 
 // https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
 float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+    return fract(sin(dot(co.xy ,vec2(12.9898, 78.233))) * 43758.5453);
 }
 
 //
@@ -124,7 +124,7 @@ vec3 getRayDirection(vec2 fragCoord, vec3 cameraDirection) {
     const float screenWidth = 1.0;
     float originToScreen = screenWidth / 2.0 / tan(FIELD_OF_VIEW / 2.0);
     
-    vec3 screenCenter = originToScreen * normalize(cameraDirection);
+    vec3 screenCenter = originToScreen * cameraDirection;
     vec3 baseX = normalize(cross(screenCenter, vec3(0, -1.0, 0)));
     vec3 baseY = normalize(cross(screenCenter, baseX));
     
@@ -136,8 +136,8 @@ float getDistance(ivec3 chunkPath, vec3 localStart, vec3 localPosition) {
 }
 
 void move(inout vec3 localPosition, vec3 rayDirection) {
-    vec3 directionSign = vec3(rayDirection.x > 0.0 ? 1.0 : -1.0, rayDirection.y > 0.0 ? 1.0 : -1.0, rayDirection.z > 0.0 ? 1.0 : -1.0);
-	vec3 bound = vec3(0.5, 0.5, 0.5) + 0.5 * directionSign;
+    vec3 directionSign = sign(rayDirection);
+	vec3 bound = vec3(0.5) + 0.5 * directionSign;
     
     vec3 amountVector = (bound - directionSign * localPosition) / abs(rayDirection);
     
@@ -155,15 +155,15 @@ vec3 getStarToRayVector(vec3 rayBase, vec3 rayDirection, vec3 starPosition) {
 // Makes sure that each component of localPosition is >= 0 and <= 1
 void moveInsideBox(inout vec3 localPosition, inout ivec3 chunk, vec3 directionSign) {
     vec3 bound = vec3(0.5, 0.5, 0.5) + 0.5 * directionSign;
-    if (localPosition.x * directionSign.x >= bound.x - 0.001) {
+    if (localPosition.x * directionSign.x >= bound.x - 0.0000001) {
         localPosition.x -= directionSign.x;
         chunk.x += int(directionSign.x);
     } 
-    if (localPosition.y * directionSign.y >= bound.y - 0.001) {
+    if (localPosition.y * directionSign.y >= bound.y - 0.0000001) {
         localPosition.y -= directionSign.y;
         chunk.y += int(directionSign.y);
     } 
-    if (localPosition.z * directionSign.z >= bound.z - 0.001) {
+    if (localPosition.z * directionSign.z >= bound.z - 0.0000001) {
         localPosition.z -= directionSign.z;
         chunk.z += int(directionSign.z);
     }
@@ -194,7 +194,7 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 vec4 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
-    vec3 color = vec3(0.0, 0.0, 0.0);
+    vec3 color = vec3(0.0);
     float spaceLeft = 1.0;    
     
     const float layerDistance = 20.0;
@@ -211,8 +211,7 @@ vec4 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
          
         if (i == 0) {
             value *= 1.0 - fract(globalPosition.z / layerDistance);
-        }
-        if (i == steps) {
+        } else if (i == steps) {
             value *= fract(globalPosition.z / layerDistance);
         }
         
@@ -279,7 +278,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     ivec3 startChunk = chunk;
     vec3 localStart = localPosition;
     
-    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+    fragColor = vec4(0.0);
     
     for (int i = 0; i < 100; i++) {
         move(localPosition, rayDirection);
@@ -309,15 +308,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                     float starColorSeed = (float(chunk.x) + 13.0 * float(chunk.y) + 7.0 * float(chunk.z)) * 0.00453;
                     fragColor = blendColors(fragColor, vec4(getStarColor(starSurfaceVector, starColorSeed, currentDistance), starMaxBrightness));                    
                     if (starMaxBrightness == 1.0) {
-                    	return;
+                    	break;
                     }
                 } else {
-                	fragColor = blendColors(fragColor, vec4(1.0, 1.0, 1.0, starMaxBrightness * getStarGlowBrightness(((distanceToStar / STAR_SIZE) - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE))));
+                    float glowBrightness = starMaxBrightness * getStarGlowBrightness(((distanceToStar / STAR_SIZE) - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE));
+                	fragColor = blendColors(fragColor, vec4(vec3(1.0), glowBrightness));
                 }
             }
         }
     }
-    
     
     fragColor = blendColors(fragColor, getNebulaColor(globalPosition, rayDirection));
     if (iGlobalTime < 1.0) {
