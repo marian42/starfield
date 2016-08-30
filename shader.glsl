@@ -135,21 +135,13 @@ float getDistance(ivec3 chunkPath, vec3 localStart, vec3 localPosition) {
     return length(vec3(chunkPath) + localPosition - localStart);
 }
 
-void move(inout vec3 localPosition, vec3 rayDirection) {
+void move(inout vec3 localPosition, vec3 rayDirection, vec3 directionBound) {
     vec3 directionSign = sign(rayDirection);
-	vec3 bound = vec3(0.5) + 0.5 * directionSign;
-    
-    vec3 amountVector = (bound - directionSign * localPosition) / abs(rayDirection);
+	vec3 amountVector = (directionBound - directionSign * localPosition) / abs(rayDirection);
     
     float amount = min(amountVector.x, min(amountVector.y, amountVector.z));
     
     localPosition += amount * rayDirection;
-}
-
-vec3 getStarToRayVector(vec3 rayBase, vec3 rayDirection, vec3 starPosition) {
-	float r = (dot(rayDirection, starPosition) - dot(rayDirection, rayBase)) / dot(rayDirection, rayDirection);
-    vec3 pointOnRay = rayBase + r * rayDirection;
-    return starPosition - pointOnRay;
 }
 
 // Makes sure that each component of localPosition is >= 0 and <= 1
@@ -158,19 +150,24 @@ void moveInsideBox(inout vec3 localPosition, inout ivec3 chunk, vec3 directionSi
     if (localPosition.x * directionSign.x >= direcctionBound.x - eps) {
         localPosition.x -= directionSign.x;
         chunk.x += int(directionSign.x);
-    } 
-    if (localPosition.y * directionSign.y >= direcctionBound.y - eps) {
+    } else if (localPosition.y * directionSign.y >= direcctionBound.y - eps) {
         localPosition.y -= directionSign.y;
         chunk.y += int(directionSign.y);
-    } 
-    if (localPosition.z * directionSign.z >= direcctionBound.z - eps) {
+    } else if (localPosition.z * directionSign.z >= direcctionBound.z - eps) {
         localPosition.z -= directionSign.z;
         chunk.z += int(directionSign.z);
     }
 }
 
-int getStarSeed(ivec3 chunk) {
-	return chunk.x * 242343423 + chunk.y * 32323575 + chunk.z * 234345734;
+bool hasStar(ivec3 chunk) {
+    return texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xy) + vec2(chunk.zx)) + vec2(0.724, 0.111), 1.0)).g > STAR_THRESHOLD
+        && texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xz) + vec2(chunk.zy)) + vec2(0.333, 0.777), 1.0)).g > STAR_THRESHOLD;
+}
+
+vec3 getStarToRayVector(vec3 rayBase, vec3 rayDirection, vec3 starPosition) {
+	float r = (dot(rayDirection, starPosition) - dot(rayDirection, rayBase)) / dot(rayDirection, rayDirection);
+    vec3 pointOnRay = rayBase + r * rayDirection;
+    return starPosition - pointOnRay;
 }
 
 vec3 getStarPosition(ivec3 chunk, float starSize) {
@@ -179,11 +176,6 @@ vec3 getStarPosition(ivec3 chunk, float starSize) {
                              rand(vec2(float(chunk.y) / float(chunk.x) + 0.12, float(chunk.y) / float(chunk.z) + 0.76))));
     
     return starSize * vec3(1.0, 1.0, 1.0) + (1.0 - 2.0 * starSize) * position;
-}
-
-bool hasStar(ivec3 chunk) {
-    return texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xy) + vec2(chunk.zx)) + vec2(0.724, 0.111), 1.0)).g > STAR_THRESHOLD
-        && texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xz) + vec2(chunk.zy)) + vec2(0.333, 0.777), 1.0)).g > STAR_THRESHOLD;
 }
 
 // http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
@@ -195,7 +187,7 @@ vec3 hsv2rgb(vec3 c) {
 
 vec4 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
     vec3 color = vec3(0.0);
-    float spaceLeft = 1.0;    
+    float spaceLeft = 1.0;
     
     const float layerDistance = 20.0;
     float rayLayerStep = rayDirection.z / layerDistance;
@@ -252,11 +244,11 @@ vec3 getStarColor(vec3 starSurfaceLocation, float seed, float viewDistance) {
     
     float progress = snoise(4.0 * coordinate);
     
-    return vec3(1.0, 1.0, 1.0) * fadeToWhite + (1.0 - fadeToWhite) * (vec3(1.0, 0.627, 0.01) * progress + (1.0 - progress) * vec3(1.0, 0.98, 0.9));   
+    return mix(vec3(1.0), mix(vec3(1.0, 0.627, 0.01), vec3(1.0, 0.98, 0.9), progress), fadeToWhite);
 }
 
 vec4 blendColors(vec4 front, vec4 back) {
-	return vec4(front.rgb * front.a + back.rgb * (1.0 - front.a), front.a + (1.0 - front.a) * back.a);
+  	return vec4(mix(back.rgb, front.rgb, front.a), front.a + back.a - front.a * back.a);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -279,7 +271,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fragColor = vec4(0.0);
     
     for (int i = 0; i < 200; i++) {
-        move(localPosition, rayDirection);
+        move(localPosition, rayDirection, directionBound);
         moveInsideBox(localPosition, chunk, directionSign, directionBound);
         
         if (hasStar(chunk)) {
