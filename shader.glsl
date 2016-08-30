@@ -2,7 +2,7 @@ const float FLIGHT_SPEED = 12.0;
 
 const float DRAW_DISTANCE = 60.0;
 const float FADEOUT_DISTANCE = 40.0; // must be < DRAW_DISTANCE    
-const float FIELD_OF_VIEW = radians(60.0);   
+const float FIELD_OF_VIEW = 1.05;   
 
 const float STAR_SIZE = 0.4; // must be > 0 and < 1
 const float STAR_CORE_SIZE = 0.3;    
@@ -153,17 +153,17 @@ vec3 getStarToRayVector(vec3 rayBase, vec3 rayDirection, vec3 starPosition) {
 }
 
 // Makes sure that each component of localPosition is >= 0 and <= 1
-void moveInsideBox(inout vec3 localPosition, inout ivec3 chunk, vec3 directionSign) {
-    vec3 bound = vec3(0.5, 0.5, 0.5) + 0.5 * directionSign;
-    if (localPosition.x * directionSign.x >= bound.x - 0.0000001) {
+void moveInsideBox(inout vec3 localPosition, inout ivec3 chunk, vec3 directionSign, vec3 direcctionBound) {
+    const float eps = 0.0000001;
+    if (localPosition.x * directionSign.x >= direcctionBound.x - eps) {
         localPosition.x -= directionSign.x;
         chunk.x += int(directionSign.x);
     } 
-    if (localPosition.y * directionSign.y >= bound.y - 0.0000001) {
+    if (localPosition.y * directionSign.y >= direcctionBound.y - eps) {
         localPosition.y -= directionSign.y;
         chunk.y += int(directionSign.y);
     } 
-    if (localPosition.z * directionSign.z >= bound.z - 0.0000001) {
+    if (localPosition.z * directionSign.z >= direcctionBound.z - eps) {
         localPosition.z -= directionSign.z;
         chunk.z += int(directionSign.z);
     }
@@ -260,17 +260,16 @@ vec4 blendColors(vec4 front, vec4 back) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    //float k = 0.4;
-    //vec3 movementDirection = vec3(sin(k * iGlobalTime), 0.0,  cos(k * iGlobalTime));
     vec3 movementDirection = normalize(vec3(0.2, 0.0, 1.0));
     
     vec3 rayDirection = getRayDirection(fragCoord, movementDirection);
-    vec3 directionSign = vec3(rayDirection.x > 0.0 ? 1.0 : -1.0, rayDirection.y > 0.0 ? 1.0 : -1.0, rayDirection.z > 0.0 ? 1.0 : -1.0);
+    vec3 directionSign = sign(rayDirection);
+    vec3 directionBound = vec3(0.5) + 0.5 * directionSign;    
     
     vec3 globalPosition = vec3(3.14159, 3.14159, 0.0) + (iGlobalTime + 1000.0) * FLIGHT_SPEED * movementDirection;
     ivec3 chunk = ivec3(globalPosition);
     vec3 localPosition = mod(globalPosition, 1.0);
-    moveInsideBox(localPosition, chunk, directionSign);
+    moveInsideBox(localPosition, chunk, directionSign, directionBound);
     
     // TODO compute starting position
         
@@ -279,18 +278,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     fragColor = vec4(0.0);
     
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 200; i++) {
         move(localPosition, rayDirection);
-        moveInsideBox(localPosition, chunk, directionSign);
+        moveInsideBox(localPosition, chunk, directionSign, directionBound);
         
         if (hasStar(chunk)) {
-            vec3 starPosition = getStarPosition(chunk, 0.5 * STAR_SIZE);       
-
-            float currentDistance = getDistance(chunk - startChunk, localStart, starPosition);
-            if (currentDistance > DRAW_DISTANCE) {
-                break;
-            }
-
+            vec3 starPosition = getStarPosition(chunk, 0.5 * STAR_SIZE);
+			float currentDistance = getDistance(chunk - startChunk, localStart, starPosition);
+            
             // This vector points from the center of the star to the closest point on the ray (orthogonal to the ray)
             vec3 starToRayVector = getStarToRayVector(localPosition, rayDirection, starPosition);
             // Distance between ray and star
@@ -315,10 +310,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 }
             }
         }
+        
+        if (length(vec3(chunk - startChunk) - localStart) > DRAW_DISTANCE) {
+            break;
+        }
     }
     
     fragColor = blendColors(fragColor, getNebulaColor(globalPosition, rayDirection));
-    if (iGlobalTime < 1.0) {
-        fragColor *= iGlobalTime;
-    }
 }
