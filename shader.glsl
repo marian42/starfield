@@ -235,7 +235,7 @@ vec3 getStarColor(vec3 starSurfaceLocation, float seed, float viewDistance) {
     const float DISTANCE_NEAR = 25.0;
     
     if (viewDistance > DISTANCE_FAR) {
-    	return vec3(1.0, 1.0, 1.0);
+    	return vec3(1.0);
     }
     
     float fadeToWhite = max(0.0, (viewDistance - DISTANCE_NEAR) / (DISTANCE_FAR - DISTANCE_NEAR));
@@ -244,7 +244,7 @@ vec3 getStarColor(vec3 starSurfaceLocation, float seed, float viewDistance) {
     
     float progress = snoise(4.0 * coordinate);
     
-    return mix(vec3(1.0), mix(vec3(1.0, 0.627, 0.01), vec3(1.0, 0.98, 0.9), progress), fadeToWhite);
+    return mix(mix(vec3(1.0, 0.98, 0.9), vec3(1.0, 0.627, 0.01), progress), vec3(1.0), fadeToWhite);
 }
 
 vec4 blendColors(vec4 front, vec4 back) {
