@@ -10,6 +10,10 @@ const float STAR_CORE_SIZE = 0.3;
 const float CLUSTER_SCALE = 0.02;
 const float STAR_THRESHOLD = 0.6;
 
+const float BLACK_HOLE_CORE_RADIUS = 0.2;
+const float BLACK_HOLE_THRESHOLD = 0.8;
+const float BLACK_HOLE_DISTORTION = 0.03;
+
 //
 // Description : Array and textureless GLSL 2D/3D/4D simplex 
 //               noise functions.
@@ -171,10 +175,15 @@ bool hasStar(ivec3 chunk) {
         && texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xz) + vec2(chunk.zy)) + vec2(0.333, 0.777), 1.0)).g > STAR_THRESHOLD;
 }
 
+bool hasBlackHole(ivec3 chunk) {
+    return texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xy) + vec2(chunk.zx)) + vec2(0.455, 0.222), 1.0)).g > BLACK_HOLE_THRESHOLD
+        && texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xz) + vec2(chunk.zy)) + vec2(0.345, 0.888), 1.0)).g > BLACK_HOLE_THRESHOLD;
+}
+
 vec3 getStarToRayVector(vec3 rayBase, vec3 rayDirection, vec3 starPosition) {
 	float r = (dot(rayDirection, starPosition) - dot(rayDirection, rayBase)) / dot(rayDirection, rayDirection);
     vec3 pointOnRay = rayBase + r * rayDirection;
-    return starPosition - pointOnRay;
+    return pointOnRay - starPosition;
 }
 
 vec3 getStarPosition(ivec3 chunk, float starSize) {
@@ -293,17 +302,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 					
                     float starColorSeed = (float(chunk.x) + 13.0 * float(chunk.y) + 7.0 * float(chunk.z)) * 0.00453;
                     fragColor = blendColors(fragColor, vec4(getStarColor(starSurfaceVector, starColorSeed, currentDistance), starMaxBrightness));                    
-                    if (starMaxBrightness == 1.0) {
-                    	break;
-                    }
                 } else {
                     float glowBrightness = starMaxBrightness * getStarGlowBrightness(((distanceToStar / STAR_SIZE) - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE));
                 	fragColor = blendColors(fragColor, vec4(vec3(1.0), glowBrightness));
                 }
             }
+        } else if (hasBlackHole(chunk)) {
+            vec3 blackHolePosition = vec3(0.5);
+			float currentDistance = getDistance(chunk - startChunk, localStart, blackHolePosition);
+            float fadeout = min(1.0, (DRAW_DISTANCE - currentDistance) / FADEOUT_DISTANCE);
+            	
+            // This vector points from the center of the black hole to the closest point on the ray (orthogonal to the ray)
+            vec3 coreToRayVector = getStarToRayVector(localPosition, rayDirection, blackHolePosition);
+            float distanceToCore = length(coreToRayVector);
+            if (distanceToCore < BLACK_HOLE_CORE_RADIUS * 0.5) {
+                fragColor = blendColors(fragColor, vec4(vec3(0.0), fadeout));
+                break;
+            } else if (distanceToCore < 0.5) {
+            	rayDirection = normalize(rayDirection - fadeout * (BLACK_HOLE_DISTORTION / distanceToCore - BLACK_HOLE_DISTORTION / 0.5) * coreToRayVector / distanceToCore);
+            }
         }
         
-        if (length(vec3(chunk - startChunk) - localStart) > DRAW_DISTANCE) {
+        if (length(vec3(chunk - startChunk) - localStart) > DRAW_DISTANCE || fragColor.a >= 1.0) {
             break;
         }
     }
