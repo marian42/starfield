@@ -198,6 +198,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             		vec3 starSurfaceVector = normalize(starToRayVector + rayDirection * sqrt(pow(STAR_CORE_SIZE * STAR_SIZE, 2.0) - pow(distanceToStar, 2.0)));
 					
                     fragColor = blendColors(fragColor, vec4(getStarColor(starSurfaceVector, starColorSeed, currentDistance), starMaxBrightness));                    
+                    break;
                 } else {
                     float localStarDistance = ((distanceToStar / STAR_SIZE) - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE);
                     vec4 glowColor = getStarGlowColor(localStarDistance, acos(starToRayVector.y / length(starToRayVector)), starColorSeed);
@@ -221,10 +222,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             }
         }
         
-        if (length(vec3(chunk - startChunk) - localStart) > DRAW_DISTANCE || fragColor.a >= 1.0) {
+        if (length(vec3(chunk - startChunk)) > DRAW_DISTANCE) {
             break;
         }
     }
     
-    fragColor = blendColors(fragColor, getNebulaColor(globalPosition, rayDirection));
+    if (fragColor.a < 1.0) {
+    	fragColor = blendColors(fragColor, getNebulaColor(globalPosition, rayDirection));
+    }
 }
