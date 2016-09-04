@@ -11,7 +11,7 @@ const float CLUSTER_SCALE = 0.02;
 const float STAR_THRESHOLD = 0.775;
 
 const float BLACK_HOLE_CORE_RADIUS = 0.2;
-const float BLACK_HOLE_THRESHOLD = 0.999;
+const float BLACK_HOLE_THRESHOLD = 0.9995;
 const float BLACK_HOLE_DISTORTION = 0.03;
 
 // http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
