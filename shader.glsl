@@ -121,8 +121,9 @@ vec4 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
     return vec4(color, 1.0);
 }
 
-float getStarGlowBrightness(float starDistance) {
-    return 0.2 * (1.0 - starDistance);
+vec4 getStarGlowColor(float starDistance, float angle, float hue) {
+    float progress = 1.0 - starDistance;
+    return vec4(hsv2rgb(vec3(hue, 0.3, 1.0)), 0.4 * pow(progress, 2.0) * mix(pow(sin(angle * 2.5), 6.0), 1.0, progress));
 }
 
 float atan2(vec2 value) {
@@ -149,7 +150,7 @@ vec3 getStarColor(vec3 starSurfaceLocation, float seed, float viewDistance) {
     
     vec3 coordinate = vec3(acos(starSurfaceLocation.y), atan2(starSurfaceLocation.xz), seed);
     
-    float progress = pow(texture2D(iChannel0, fract(0.3 * coordinate.xy + seed * vec2(1.1))).r, 2.0);
+    float progress = pow(texture2D(iChannel0, fract(0.3 * coordinate.xy + seed * vec2(1.1))).r, 4.0);
     
     return mix(mix(vec3(1.0, 0.98, 0.9), vec3(1.0, 0.627, 0.01), progress), vec3(1.0), fadeToWhite);
 }
@@ -192,15 +193,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             if (distanceToStar < STAR_SIZE) {
                 float starMaxBrightness = min(1.0, (DRAW_DISTANCE - currentDistance) / FADEOUT_DISTANCE);
             	
+                float starColorSeed = (float(chunk.x) + 13.0 * float(chunk.y) + 7.0 * float(chunk.z)) * 0.00453;
                 if (distanceToStar < STAR_SIZE * STAR_CORE_SIZE) {
                     // This vector points from the center of the star to the point of the star sphere surface that this ray hits
             		vec3 starSurfaceVector = normalize(starToRayVector + rayDirection * sqrt(pow(STAR_CORE_SIZE * STAR_SIZE, 2.0) - pow(distanceToStar, 2.0)));
 					
-                    float starColorSeed = (float(chunk.x) + 13.0 * float(chunk.y) + 7.0 * float(chunk.z)) * 0.00453;
                     fragColor = blendColors(fragColor, vec4(getStarColor(starSurfaceVector, starColorSeed, currentDistance), starMaxBrightness));                    
                 } else {
-                    float glowBrightness = starMaxBrightness * getStarGlowBrightness(((distanceToStar / STAR_SIZE) - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE));
-                	fragColor = blendColors(fragColor, vec4(vec3(1.0), glowBrightness));
+                    float localStarDistance = ((distanceToStar / STAR_SIZE) - STAR_CORE_SIZE) / (1.0 - STAR_CORE_SIZE);
+                    vec4 glowColor = getStarGlowColor(localStarDistance, acos(starToRayVector.y / length(starToRayVector)), starColorSeed);
+                    glowColor.a *= starMaxBrightness;
+                	fragColor = blendColors(fragColor, glowColor);
                 }
             }
         } else if (hasBlackHole(chunk)) {
