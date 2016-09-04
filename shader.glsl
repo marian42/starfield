@@ -1,14 +1,14 @@
-const float FLIGHT_SPEED = 4.0;
+const float FLIGHT_SPEED = 8.0;
 
-const float DRAW_DISTANCE = 60.0;
-const float FADEOUT_DISTANCE = 40.0; // must be < DRAW_DISTANCE    
+const float DRAW_DISTANCE = 60.0; // Lower this to increase framerate
+const float FADEOUT_DISTANCE = 45.0; // must be < DRAW_DISTANCE    
 const float FIELD_OF_VIEW = 1.05;   
 
-const float STAR_SIZE = 0.4; // must be > 0 and < 1
-const float STAR_CORE_SIZE = 0.25;    
+const float STAR_SIZE = 0.6; // must be > 0 and < 1
+const float STAR_CORE_SIZE = 0.14;
 
 const float CLUSTER_SCALE = 0.02;
-const float STAR_THRESHOLD = 0.76;
+const float STAR_THRESHOLD = 0.775;
 
 const float BLACK_HOLE_CORE_RADIUS = 0.2;
 const float BLACK_HOLE_THRESHOLD = 0.999;
