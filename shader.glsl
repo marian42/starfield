@@ -11,7 +11,7 @@ const float CLUSTER_SCALE = 0.02;
 const float STAR_THRESHOLD = 0.76;
 
 const float BLACK_HOLE_CORE_RADIUS = 0.2;
-const float BLACK_HOLE_THRESHOLD = 0.95;
+const float BLACK_HOLE_THRESHOLD = 0.999;
 const float BLACK_HOLE_DISTORTION = 0.03;
 
 // http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
@@ -73,8 +73,7 @@ bool hasStar(ivec3 chunk) {
 }
 
 bool hasBlackHole(ivec3 chunk) {
-    return texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xy) + vec2(chunk.zx)) + vec2(0.455, 0.222), 1.0)).r > BLACK_HOLE_THRESHOLD
-        && texture2D(iChannel0, mod(CLUSTER_SCALE * (vec2(chunk.xz) + vec2(chunk.zy)) + vec2(0.345, 0.888), 1.0)).r > BLACK_HOLE_THRESHOLD;
+    return rand(0.0001 * vec2(chunk.xy) + 0.002 * vec2(chunk.yz)) > BLACK_HOLE_THRESHOLD;
 }
 
 vec3 getStarToRayVector(vec3 rayBase, vec3 rayDirection, vec3 starPosition) {
@@ -207,7 +206,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 }
             }
         } else if (hasBlackHole(chunk)) {
-            vec3 blackHolePosition = vec3(0.5);
+            const vec3 blackHolePosition = vec3(0.5);
 			float currentDistance = getDistance(chunk - startChunk, localStart, blackHolePosition);
             float fadeout = min(1.0, (DRAW_DISTANCE - currentDistance) / FADEOUT_DISTANCE);
             	
