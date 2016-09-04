@@ -138,8 +138,8 @@ float atan2(vec2 value) {
 }
 
 vec3 getStarColor(vec3 starSurfaceLocation, float seed, float viewDistance) {
-    const float DISTANCE_FAR = 300.0;
-    const float DISTANCE_NEAR = 250.0;
+    const float DISTANCE_FAR = 20.0;
+    const float DISTANCE_NEAR = 15.0;
     
     if (viewDistance > DISTANCE_FAR) {
     	return vec3(1.0);
