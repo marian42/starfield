@@ -181,6 +181,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if (hasStar(chunk)) {
             vec3 starPosition = getStarPosition(chunk, 0.5 * STAR_SIZE);
 			float currentDistance = getDistance(chunk - startChunk, localStart, starPosition);
+            if (currentDistance > DRAW_DISTANCE && false) {
+                break;
+            }
             
             // This vector points from the center of the star to the closest point on the ray (orthogonal to the ray)
             vec3 starToRayVector = getStarToRayVector(localPosition, rayDirection, starPosition);
@@ -189,7 +192,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             distanceToStar *= 2.0;
             
             if (distanceToStar < STAR_SIZE) {
-                float starMaxBrightness = min(1.0, (DRAW_DISTANCE - currentDistance) / FADEOUT_DISTANCE);
+                float starMaxBrightness = clamp((DRAW_DISTANCE - currentDistance) / FADEOUT_DISTANCE, 0.001, 1.0);
             	
                 float starColorSeed = (float(chunk.x) + 13.0 * float(chunk.y) + 7.0 * float(chunk.z)) * 0.00453;
                 if (distanceToStar < STAR_SIZE * STAR_CORE_SIZE) {
