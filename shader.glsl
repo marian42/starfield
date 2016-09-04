@@ -154,7 +154,7 @@ vec3 getStarColor(vec3 starSurfaceLocation, float seed, float viewDistance) {
 }
 
 vec4 blendColors(vec4 front, vec4 back) {
-  	return vec4(mix(back.rgb, front.rgb, front.a), front.a + back.a - front.a * back.a);
+  	return vec4(mix(back.rgb, front.rgb, front.a / (front.a + back.a)), front.a + back.a - front.a * back.a);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
