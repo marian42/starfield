@@ -1,7 +1,7 @@
 const float FLIGHT_SPEED = 8.0;
 
 const float DRAW_DISTANCE = 60.0; // Lower this to increase framerate
-const float FADEOUT_DISTANCE = 45.0; // must be < DRAW_DISTANCE    
+const float FADEOUT_DISTANCE = 10.0; // must be < DRAW_DISTANCE    
 const float FIELD_OF_VIEW = 1.05;   
 
 const float STAR_SIZE = 0.6; // must be > 0 and < 1
@@ -163,7 +163,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     vec3 rayDirection = getRayDirection(fragCoord, movementDirection);
     vec3 directionSign = sign(rayDirection);
-    vec3 directionBound = vec3(0.5) + 0.5 * directionSign;    
+    vec3 directionBound = vec3(0.5) + 0.5 * directionSign;
     
     vec3 globalPosition = vec3(3.14159, 3.14159, 0.0) + (iGlobalTime + 1000.0) * FLIGHT_SPEED * movementDirection;
     ivec3 chunk = ivec3(globalPosition);
