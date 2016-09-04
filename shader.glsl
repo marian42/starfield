@@ -94,7 +94,7 @@ vec4 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
     vec3 color = vec3(0.0);
     float spaceLeft = 1.0;
     
-    const float layerDistance = 5.0;
+    const float layerDistance = 10.0;
     float rayLayerStep = rayDirection.z / layerDistance;
     
     const int steps = 4;
@@ -103,8 +103,7 @@ vec4 getNebulaColor(vec3 globalPosition, vec3 rayDirection) {
     	noiseeval.xy += noiseeval.z;
         
         
-        float value = 0.06
-            * texture2D(iChannel0, fract(noiseeval.xy / 40.0)).r;
+        float value = 0.06 * texture2D(iChannel0, fract(noiseeval.xy / 60.0)).r;
          
         if (i == 0) {
             value *= 1.0 - fract(globalPosition.z / layerDistance);
@@ -159,7 +158,7 @@ vec4 blendColors(vec4 front, vec4 back) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec3 movementDirection = normalize(vec3(0.2, 0.0, 1.0));
+    vec3 movementDirection = normalize(vec3(0.01, 0.0, 1.0));
     
     vec3 rayDirection = getRayDirection(fragCoord, movementDirection);
     vec3 directionSign = sign(rayDirection);
